@@ -1,125 +1,125 @@
+import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
+  //告诉flutter运行 MyApp中定义的程序
   runApp(const MyApp());
 }
 
+//在构建每一个Flutter应用时，widget都是一个基本要素
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    ///使用 ChangeNotifierProvider 创建状态并将其提供给整个应用（参见上面 MyApp 中的代码）。这样一来，应用中的任何 widget 都可以获取状态。
+    return ChangeNotifierProvider(
+        create: (context) => MyAppState(),
+        child: MaterialApp(
+            title: "Namer App",
+            theme: ThemeData(
+                useMaterial3: true,
+                colorScheme:
+                    ColorScheme.fromSeed(seedColor: Colors.deepOrange)),
+            home: MyHomePage()));
+  }
+}
+
+///MyAppState定义了应用程序的状态，所谓状态就是我们理解的应用程序运行中的所需的一些数据
+///比如我们当前的程序只需要一个随机的单词对
+///扩展自自ChangeNotifier的类，意味着它可以通知其他人自己的更改，例如当当前当前单词对发生变化时，应用中的某些widget需要感知到这种变化
+class MyAppState extends ChangeNotifier {
+  var current = WordPair.random();
+  //用户喜欢的内容集合
+  var favorites = <WordPair>[];
+
+  //提供getNext方法，用于获取下一对单词，通过notifyListeners方法,以确保向任何通过 watch 方法跟踪 MyAppState 的对象发出通知。
+  void getNext() {
+    current = WordPair.random();
+    notifyListeners();
+  }
+
+  void toggleFavorite() {
+    if (favorites.contains(current)) {
+      favorites.remove(current);
+    } else {
+      favorites.add(current);
+    }
+    notifyListeners();
+  }
+}
+
+class MyHomePage extends StatelessWidget {
+  ///widget中的build方法用于每当widget的环境发生变化时，系统会自动调用当前方法，以便widget能及时响应处理，保持自己为最新状态
+  @override
+  Widget build(BuildContext context) {
+    //使用watch跟踪当前APP状态的变更
+    var appState = context.watch<MyAppState>();
+    var wordPair = appState.current;
+    var icon = appState.favorites.contains(wordPair)
+        ? Icons.favorite
+        : Icons.favorite_border;
+
+    return Scaffold(
+      //column是一种布局，它接收任意数量的children，并将这些children从上到下排列在一列中
+      //其中children的每个元素都是一个widget
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Text('A random AWESOME idea:'),
+            BigCard(wordPair: wordPair),
+            //两个组件之间增加间隔的
+            const SizedBox(height: 10),
+            //添加一个按钮，其中onPressed是点击事件，而child是按钮的文本
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                    onPressed: appState.toggleFavorite,
+                    icon: Icon(icon),
+                    label: const Text('like')),
+                ElevatedButton(
+                    onPressed: appState.getNext, child: Text('Next')),
+              ],
+            )
+          ],
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class BigCard extends StatelessWidget {
+  const BigCard({
+    super.key,
+    required this.wordPair,
+  });
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+  final WordPair wordPair;
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    final theme = Theme.of(context);
+
+    //访问字体主题displayMedium是展示大号文本
+    //调用copyWith返回一个副本，将原来的文本颜色主题保存
+    final style = theme.textTheme.displayMedium!.copyWith(
+      color: theme.colorScheme.onPrimary,
+    );
+    return Card(
+      color: theme.colorScheme.primary,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Text(
+          wordPair.asLowerCase,
+          style: style,
+          //用于无障碍功能,展示给屏幕阅读器的
+          semanticsLabel: "${wordPair.first} ${wordPair.second}",
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
